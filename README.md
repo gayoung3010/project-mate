@@ -1,11 +1,9 @@
 # 프로젝트명
 MATE (Market Adult Toy ERP)
 
-
 ## 개요
 - 어른 장난감 대한 구매, 지점, 판매 매출 정보 등을 관리하는 ERP 서비스
 - Spring Framework를  이용한  쇼핑몰 + ERP 사이트
-
 
 ## 수행 기간
 

@@ -1,0 +1,30 @@
+jsonfiles
+web->css,html,jspfiles
+spelling
+workspace
+
+-Duser.language=en -Duser.region=US
+
+$ pwd
+$ git config --list
+$ git config --global user.name "gayoung3010"
+$ git config --global user.email "zzzzc_c@naver.com"
+$ cd C:\\workspaces\\webclient_workspace\\01_html\\kimgayoung
+$ ls
+$ git init
+$ ls -a
+$ git status
+$ git add *
+$ git commit -m "챗 커 밋"
+$ git log
+$ git add *
+$ got status
+$ git commit m "안보여"
+$ git remote add origin https://github.com/gayoung3010/gayoung3010.github.io.git
+$ git remote show origin ->보여주는거
+$ git push origin master
+
+1.git status 변경된 내용이 있는지 없는지
+2.변경내역이 생기면 add ->3 commit
+4.push를 해야 적용이 된다
+

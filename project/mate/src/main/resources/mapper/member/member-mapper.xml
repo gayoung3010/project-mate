@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="member">
+
+	<delete id="deleteAddress">
+		delete from
+			address
+		where
+			address_name = #{addressName}
+			and member_id = #{memberId}
+	</delete>
+
+	<insert id="insertMember">
+		insert into
+			member
+		values (
+			#{ memberId },
+			#{ memberPWD },
+			#{ memberName },
+			#{ gender },
+			#{ phone },
+			default
+		)
+		
+	</insert>
+
+	<select id="selectOneMember" resultMap="memberMap">
+		select 
+			*
+		from
+			member
+		where
+			member_id = #{ memberId }
+	</select>
+	
+	<resultMap type="member" id="memberMap">
+	
+	</resultMap>
+	
+	<update id="updateMember">
+ 		update
+ 			member
+ 		<set>
+ 			<if test="memberId != null and memberId != ''">
+ 				member_id = #{ memberId },
+ 			</if>
+ 			<if test="memberPWD != null and memberPWD != ''">
+ 				member_pwd = #{ memberPWD },
+ 			</if>
+ 			<if test="memberName != null and memberName != ''">
+ 				member_name = #{ memberName },
+ 			</if>
+ 			<if test="gender != null and gender != ''">
+ 				gender = #{ gender },
+ 			</if>
+ 			<if test="phone != null and phone != ''">
+ 				phone = #{ phone }
+ 			</if>
+ 		</set>
+ 		where member_id = #{ memberId }
+ 	</update>
+	
+	<delete id="deleteMember">
+		delete from member where member_id = #{ memberId }
+	</delete>
+	
+	<select id="selectAllPurchase" resultMap="purchaseMap">
+		select
+		    p.purchase_no purchase_no,
+		    p.purchase_date purchase_date,
+		    p.member_id member_id,
+		    pl.purchase_log_no purchase_log_no,
+		    pl.product_no product_no,
+		    (select product_name from product where product_no = pl.product_no) product_name,
+		    pl.amount amount,
+		    pl.status status,
+		    pl.purchased purchased,
+            R.review_no review_no,
+            (select price from product where product_no = pl.product_no) price,
+            (select confirm from return where purchase_log_no = PL.purchase_log_no) confirm
+		from
+			purchase_log PL
+				join purchase P
+                    on P.purchase_no = PL.purchase_no
+                left join review R
+                    on PL.purchase_log_no = R.purchase_log_no
+        where
+            member_id = #{ memberId }
+        order by
+        	purchase_date desc
+	</select>
+	
+	<select id="selectMemberAddress" resultType="address">
+		select
+			*
+		from
+			address
+		where
+			member_id = #{memberId}
+		order by
+			reg_date desc
+	</select>
+	
+	<select id="checkAddressName" resultType="_int">
+		select 
+			count(*)
+		from 
+			address
+		where 
+			member_id = #{memberId} 
+			and 
+			address_name = #{addressName}
+	</select>
+	
+	<insert id="insertAddress">
+		insert into
+			address
+		values(
+			#{addressName},
+			#{memberId},
+			#{receiverName},
+			#{receiverPhone},
+			#{addr1},
+			#{addr2},
+			#{addr3},
+			default
+		)
+	</insert>
+	
+	<update id="successPurchase">
+		update
+			purchase_log
+		set
+			purchased = 1
+		where
+			purchase_no = #{purchaseNo}
+	</update>
+	
+	<delete id="failPurchase">
+		delete from
+			purchase
+		where
+			purchase_no = #{purchaseNo}
+	</delete>
+	
+	<resultMap id="purchaseMap" type="map">
+		<result column="purchase_no" property="purchaseNo"/>
+		<result column="purchase_date" property="purchaseDate"/>
+		<result column="member_id" property="memberId"/>
+		<result column="price" property="price"/>
+		<result column="purchase_log_no" property="purchaseLogNo"/>
+		<result column="product_no" property="productNo"/>
+		<result column="product_name" property="productName"/>
+		<result column="purchased" property="purchased"/>
+		<result column="amount" property="amount"/>
+		<result column="status" property="status"/>
+		<result column="review_no" property="reviewNo"/>
+		<result column="confirm" property="confirm"/>
+	</resultMap>
+	
+	<select id="searchMember" resultType="Member">
+			SELECT * 
+			FROM (
+			SELECT ROWNUM as rnum, M.*
+				FROM (
+			    	select *
+                       from(   
+                            SELECT mm.*
+                                 FROM member mm
+                             ) 					
+						where
+							member_id != 'admin'
+							<if test="options.searchType != null and options.searchType != '' and options.searchKeyword != null and options.searchKeyword != ''">
+								and ${ options.searchType }  like '%' || #{ options.searchKeyword } || '%'
+							</if>
+						
+						ORDER BY enroll_date DESC 
+						) M
+				)
+			 where rnum BETWEEN #{ start } AND #{ end }
+	</select>
+	<select id="searchContent" resultType="_int">
+			<![CDATA[
+			select count(*) total_contents from member
+			 ]]>
+		  <where>
+			<if test="options.searchType != null and options.searchKeyword != null">
+				and  ${ options.searchType } like '%' || #{ options.searchKeyword } || '%'
+			</if>
+		</where>
+		
+	</select>
+	
+	<update id="tempPassword">
+		update member
+			set member_PWD = #{ password }
+		where member_id = #{ memberId }
+	</update>
+</mapper>

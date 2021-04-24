@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="csReply">
+  
+ <select id="cs" resultType="cs">
+		select
+			*
+		from
+			cs
+		order by
+		notice desc, cs_no desc
+	</select>
+	<select id="selectOneCs" resultType="cs">
+		select 
+			*	
+		from 
+			cs 
+		 where cs_no = #{ csNo }
+		order by
+		notice desc, cs_no desc
+	</select>
+	
+	<select id="selectReplyList" resultType="CsReply">
+		select 
+		    * 
+		from  cs_reply c left join member m on c.member_id = m.member_id
+		where  cs_no = #{ csNo }
+		order by reg_date desc
+			
+	</select>
+	
+	<insert id="csInsertReply">
+		insert into
+			 cs_reply 
+			 values(
+			  seq_cs_reply_no.nextval,
+			   #{ content }, 
+			   default, 
+			   #{ csNo },
+			   #{ memberId }
+			   )
+	</insert>
+	
+	<delete id="csDeleteReply">
+		delete from cs_reply
+		where cs_reply_no = #{ csReplyNo } 
+	
+	</delete>
+</mapper>

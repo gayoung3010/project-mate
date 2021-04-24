@@ -1,0 +1,485 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="erp">
+
+	<update id="productResale">
+		update
+			product
+		set
+			enabled = 0
+		where
+			product_no = #{productNo}
+	</update>
+
+
+	<resultMap type="Product" id="productMap"></resultMap>
+	
+	<select id="searchInfo" resultMap="productMap">
+		select 
+			B.* 
+		from ( 
+			select 
+				ROWNUM RN, 
+				A.*
+        	from 
+        		(select 
+					p.product_no,
+					p.product_name,
+					p.category,
+					p.manufacturer_id,
+					s.emp_id,
+					p.enabled,
+					p.reg_date,
+					nvl(s.stock,0) stock,
+					e.emp_name
+				 from 
+					product p 
+						left join 
+					stock s
+						on (p.product_no = s.product_no)
+						left join 
+					emp e
+						on (s.emp_id = e.emp_id)
+				<where>
+					<if test="emp.status != 2">
+						(s.emp_id = #{emp.empId} or s.emp_id is null)
+					</if>
+					<if test="category != null and !category.isempty">
+						 and p.category = #{category}
+					</if>
+					<if test="select != null and select.equals('product_name')">
+						<if test="search != null and !search.isempty">
+							and p.product_name like '%' || #{search} || '%'
+						</if>
+					</if>
+					<if test="select != null and select.equals('product_no')">
+						<if test="search != null and !search.isempty">
+							and p.product_no = #{sNum}
+						</if>
+					</if>
+					<if test="lNum != null">
+						and s.stock <![CDATA[ <= ]]> #{lNum}
+					</if>
+					<if test="uNum!= null">
+						and s.stock <![CDATA[ >= ]]> #{uNum}
+					</if>
+			
+				</where>
+				order by p.product_name
+				)A
+			) B
+        WHERE
+        	RN BETWEEN #{page.start} and #{page.end}
+	</select>
+	
+	<select id="orderProduct" resultMap="productMap">
+		select p.product_no product_no,
+			p.product_name product_name,
+			p.category category,
+			p.manufacturer_id manufacturer_id,
+			p.reg_date reg_date,
+			s.stock stock,
+			s.emp_id branchEmp 
+		from product p left join stock s
+		on (p.product_no = s.product_no)
+		<where>
+			p.product_no = #{productNo} 
+			<if test="eId != null and !eId.isempty">
+				and (s.emp_id = #{ eId } or s.emp_id is null)
+			</if>
+		</where>
+	</select>
+	
+	
+	
+	
+	<select id="selectProductOne" resultType="product">
+ 		select
+ 			*
+ 		from
+ 			product 
+ 		where
+ 			product_no = #{ productNo }
+ 	</select>
+ 	
+ 	<select id="selectProductMainImages" resultType="productMainImages">
+ 		select
+ 			*
+ 		from
+ 			product_main_images
+ 		where
+ 			product_no = #{ productNo }
+ 	</select>
+ 	
+ 	<select id="selectProductImages" resultType="productImages">
+ 		select
+ 			*
+ 		from
+ 			product_images
+ 		where
+ 			product_no = #{ productNo }
+ 	</select>
+ 	
+ 	<select id="selectRequsestList" resultType="requestLog">
+ 		select
+			rl.request_no,
+			rl.manufacturer_id,
+			rl.amount,
+			rl.confirm,
+			rl.emp_id,
+			p.product_name,
+			p.category,
+			p.price
+		from
+			request_log rl inner join
+			product p 
+		on 
+			rl.product_no = p.product_no
+		where 
+			rl.manufacturer_id = #{empId} and
+			rl.confirm not in 1 
+		order by rl.request_no desc
+ 	</select>
+ 	
+ 	<select id="selectEmpRequest" resultType="requestLog">
+ 		select
+			rl.request_no,
+			rl.product_no,
+			rl.manufacturer_id,
+			rl.amount,
+			rl.request_date,
+			rl.confirm,
+			rl.emp_id,
+			p.product_name,
+			p.category,
+			p.price
+		from
+			Request_Log rl inner join
+			Product p
+		on rl.Product_no = P.product_no
+		where
+			rl.manufacturer_id = #{empId}
+		order by 
+		rl.request_no desc
+ 	</select>
+ 	
+ 	<select id="selectReceiveList" resultType="receive">
+ 		select
+ 			r.receive_no,
+ 			r.manufacturer_id,
+ 			r.confirm,
+ 			r.amount,
+ 			r.product_no,
+ 			r.emp_id,
+ 			p.product_name,
+ 			p.category,
+ 			p.price,
+			(
+			select 
+				S.stock
+			from 
+				stock S
+			where 
+				s.emp_id = #{ empId } and 
+				S.product_no = P.product_no 
+			) stock
+		from          
+   			receive R 
+		inner join
+ 			product P
+		on
+ 			R.product_no = P.product_no
+		where 
+			r.emp_id = #{ empId } and
+			r.confirm not in 1
+			
+ 	</select>
+ 	
+ 	<select id="StockLogMapList" resultMap="stockLogMap">
+ 		select
+ 			s.product_no,
+ 			(select emp_name from emp where emp_id = s.emp_id) emp_name,
+ 			s.emp_id,
+ 			s.stock,
+ 			p.product_name,
+ 			p.category,
+ 			(select emp_name from emp where emp_id = p.manufacturer_id) manufacturer_name
+ 		from
+ 			stock S 
+ 		inner join
+ 			product P
+ 		on S.product_no = P.product_no
+		<where>
+			<if test="branchId != null and branchId != '' ">
+			s.emp_id = #{branchId}
+			</if>
+			<if test="searchType != null and searchType != '' and searchKeyword != null and searchKeyword != ''">
+			and p.${searchType} like '%' || #{searchKeyword} || '%'
+			</if>
+		</where>
+ 	</select>
+ 	
+ 	<select id="selectRequestMapList" resultMap="requestMap">
+ 		select
+ 			rl.request_no,
+ 			rl.manufacturer_id,
+ 			rl.amount,
+ 			TO_CHAR(rl.request_date,'YYYY-MM-DD') request_date,
+ 			rl.confirm,
+ 			rl.product_no,
+ 			rl.emp_id,
+ 			p.product_name,
+ 			(select emp_name from emp where emp_id = rl.manufacturer_id) manufacturer_name,
+ 			(select emp_name from emp where emp_id = rl.emp_id) branch_name
+ 		from
+ 			request_log rl
+ 		inner join
+ 			product p
+ 		on rl.product_no = p.product_no
+ 			<where>
+ 				<choose>
+ 					<when test="status == 1">
+						rl.emp_id = #{branchId} 					
+ 					</when>
+ 					<otherwise>
+ 					<if test="manufacturerId != null and manufacturerId != '' ">
+					rl.manufacturer_id = #{manufacturerId}
+					</if>
+					<if test="confirm != null and confirm != ''">
+					and rl.confirm = #{confirm}
+					</if>
+					<if test="searchType != null and searchType != '' and searchKeyword != null and searchKeyword != ''">
+					and p.${searchType} like '%' || #{searchKeyword} || '%'
+					</if>
+	 				<if test ="branchId != null and branchId != ''">
+					and rl.emp_id = #{branchId}
+ 					</if>
+ 					</otherwise>
+ 				</choose>
+ 			</where>
+ 	</select>
+ 	
+	<insert id="productEnroll">
+ 		insert into 
+ 			product
+ 		values
+ 		(
+ 		seq_product_no.nextval,
+ 		 #{productName},
+ 		 default,
+ 		 #{category},
+ 		 #{content},
+ 		 #{price},
+ 		 #{manufacturerId},
+ 		 default
+ 		)
+ 		<selectKey order="AFTER" resultType="_int" keyProperty="productNo">
+			select
+				seq_product_no.currval 			
+ 			from
+ 				dual
+ 		</selectKey>
+ 	</insert>
+ 
+ 	
+ 	<insert id="productImageEnroll">
+ 		insert into
+ 			product_images
+ 		values
+ 		(
+		seq_product_image_no.nextval,
+		#{ renamedFilename },
+		#{ productNo }
+ 		)
+ 	</insert>
+ 	
+
+ 	<insert id="productMainImagesEnroll">
+ 		insert into
+ 			product_main_images
+ 		values
+ 		(
+ 		seq_product_main_image_no.nextval,
+ 		#{ originalFilename },
+ 		#{ renamedFilename },
+ 		#{ productNo }
+ 		)
+ 	</insert>
+ 	
+ 	<update id="productUpdate">
+ 		update product
+ 			set
+ 		product_name = #{ productName },
+ 		category = #{ category },
+ 		content = #{ content },
+ 		price = #{ price }
+ 			where
+ 		product_no = #{ productNo }	
+ 	</update>
+ 	
+ 	
+ 	<delete id="productMainImagesDelete">
+ 		delete from
+ 			product_main_images
+ 		where
+ 			product_no = #{ productNo }
+ 	</delete>
+ 	
+ 	<delete id="productDelete">
+ 		delete from
+ 			product
+ 		where
+ 			product_no = #{ productNo }
+ 	</delete>
+
+	<delete id="productImagesDelete">
+		delete from
+			product_images
+		where
+			product_no = #{ productNo }
+	</delete>
+	
+	<select id="findEmpid" resultType="string">
+ 		select emp_id from product where product_no = #{productNo}
+ 	</select>
+ 	
+ 	<insert id="productOrder">
+ 		insert into request_log values (
+ 		seq_request_no.nextval,
+ 		#{empId},
+ 		#{stock},
+ 		default,
+ 		default,
+ 		#{productNo},
+ 		#{branchEmp}
+ 		)
+ 	</insert>
+ 	
+ 	<update id="updateRequestToApp">
+ 		update 
+ 			request_log
+ 		set
+ 			confirm = 1
+ 		where 
+ 			request_no = #{requestNo}
+ 		
+ 	</update>
+ 	
+ 	<update id="updateRequestToRef">
+ 		update 
+ 			request_log
+ 		set
+ 			confirm = -1
+ 		where 
+ 			request_no = #{requestNo}
+ 	</update>
+ 	
+ 	<update id="updateReceiveToApp">
+ 		update
+ 			receive
+ 		set
+ 			confirm = 1
+ 		where
+ 			receive_no = #{receiveNo}
+ 	</update>
+
+	<update id="updateReceiveToRef">
+		update
+			receive
+		set
+			confirm = -1
+		where
+			receive_no = {receiveNo}
+	</update>
+	
+	<update id="UpdateProductToDelete">
+		update
+			product
+		set
+			enabled = 1
+		where
+			product_no = #{productNo}
+	</update>
+	
+	<select id="countProduct" resultType="_int">
+	    select COUNT(*)
+		from product p left join stock s
+		on (p.product_no = s.product_no)
+		<where>
+			<if test="emp.status != 2">
+				(emp_id = #{emp.empId} or emp_id is null)
+			</if>
+			<if test="category != null and category != ''">
+				 and p.category = #{category}
+			</if>
+			<if test="select != null and select.equals('product_name')">
+				<if test="search != null and !search.isempty">
+					and p.product_name like '%' || #{search} || '%'
+				</if>
+			</if>
+			<if test="select != null and select.equals('product_no')">
+				<if test="search != null and !search.isempty">
+					and p.product_no = #{sNum}
+				</if>
+			</if>
+			<if test="lNum != null">
+				and s.stock <![CDATA[ <= ]]> #{lNum}
+			</if>
+			<if test="uNum!= null">
+				and s.stock <![CDATA[ >= ]]> #{uNum}
+			</if>
+		</where>
+	</select>
+	<select id="selectAll" resultMap="productMap">
+	select * from product
+	</select>
+	<select id="productCompare" resultType="_int">
+	 	select p.product_no
+		from product p left join stock s
+		on (p.product_no = s.product_no)
+		<where>
+			<if test="status != 2">
+			s.emp_id = #{empId} or emp_id is null
+			</if>
+		</where>
+	</select>
+	<insert id="mStockInsert">
+		 insert into stock VALUES(#{ pro.productNo },#{emp.empId},default)
+	</insert>
+	
+	<select id="proLogList" resultType="Product">
+		select product_no,emp_id,confirm from request_log where emp_id = #{emp.empId}
+	</select>
+	
+	<resultMap type="map" id="stockLogMap">
+		<id column="product_no" property="productNo"/>
+		<result column="emp_name" property="empName"/>
+		<result column="emp_id" property="empId"/>
+		<result column="manufacturer_name" property="manufacturerName"/>
+		<result column="stock" property="stock"/>
+		<result column="status" property="status"/>
+		<result column="product_no" property="productNo"/>
+		<result column="product_name" property="productName"/>
+		<result column="category" property="category"/>
+		<result column="amount" property="amount"/>
+		<result column="manufacturer_id" property="manufacturerId"/>
+		<result column="enabled" property="enabled"/>
+	</resultMap>
+	
+	<resultMap type="map" id="requestMap">
+		<id column="request_no" property="requestNo"/>
+		<result column="manufacturer_id" property="manufacturerId"/>
+		<result column="amount" property="amount"/>
+		<result column="request_date" property="requestDate"/>
+		<result column="product_name" property="productName"/>
+		<result column="confirm" property="confirm"/>
+		<result column="product_no" property="productNo"/>
+		<result column="emp_id" property="empId"/>
+		<result column="manufacturer_name" property="manufacturerName"/>
+		<result column="branch_name" property="branchName"/>
+		<result column="enabled" property="enabled"/>
+	</resultMap>
+	
+</mapper>

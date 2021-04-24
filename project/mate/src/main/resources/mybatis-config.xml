@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+  PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+<!--   <properties resource="/datasource.properties"/> -->
+  <settings>
+  	<setting name="jdbcTypeForNull" value="NULL"/>
+  	<setting name="mapUnderscoreToCamelCase" value="true"/>
+  </settings>
+  
+  <typeAliases>
+  	<!-- <typeAlias type="com.kh.mate.demo.model.vo.Dev" alias="dev"/> -->
+  	<package name="com.kh.mate"/>
+  </typeAliases>
+  
+  <typeHandlers>
+  	<!-- <typeHandler handler="com.kh.mate.common.typehandler.StringArrayTypeHandler"/> -->
+  	<package name="com.kh.mate.common.typehandler"/>
+  </typeHandlers>
+  
+</configuration>

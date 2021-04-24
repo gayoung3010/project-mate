@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="product">
+
+	<select id="getBestList" resultType="int">
+		select 
+			product_no
+		from(
+		        select
+					product_no,
+					count(*) cnt
+				from
+					purchase_log
+		        where
+		            product_no is not null
+				group by
+					product_no
+				order by
+					cnt desc
+		)
+		where
+		    <![CDATA[rownum <= 5]]>
+	</select>
+
+	<select id="getBestImg" resultMap="pdiMap">
+		select
+			renamed_filename,
+			product_no
+		from
+			product_main_images
+		where
+			product_no = #{product_no}
+	</select>
+	<resultMap id="pdiMap" type="map">
+		<result column="renamed_filename" property="renamedFilename"/>
+		<result column="product_no" property="productNo"/>
+	</resultMap>
+
+	<select id="countProduct" resultType="_int">
+		select 
+			COUNT(*) 
+		from 
+			product
+		<where>
+	 		<if test="cateArr != null">
+	 			category in  
+	 				<foreach collection="cateArr"
+				    		 item="cateArr"
+				    		 open="("
+				    		 close=")"
+				    		 separator=",">
+				    	#{ cateArr }
+				    </foreach>
+	 		</if>
+	 		<if test="search != null and !search.isempty">
+		 		and (product_name like '%' || #{search} || '%'
+	 			or content like '%' || #{search} || '%')
+	 		</if>
+ 		</where>
+	</select>
+	
+	<select id="selectCartList" resultType="cart">
+		select
+	    	C.member_id member_id,
+            C.product_no product_no,
+            C.amount amount,
+            p.product_name product_name,
+            p.reg_date reg_date,
+            p.category category,
+            p.price price
+		from
+	    	cart C 
+	    		inner join 
+	    	product p 
+	    		on 
+	    	C.product_no = P.product_no
+	    where
+	    	member_id = #{ memberId }
+	</select>
+ 
+ 	<select id="selectProductListAll" resultType="product">
+		select 
+			* 
+		from ( 
+			select 
+				ROWNUM RN, 
+				A.*
+        	from 
+        		(select 
+        			*
+        		 from 
+        		 	product
+        		 where
+        		 	enabled != 1
+        	) A
+        )
+        WHERE 
+        	RN BETWEEN #{start} and #{end}
+ 	
+ 	</select>
+ 	
+ 	<select id="selectProductOne" resultType="product">
+ 		select
+ 			P.*
+ 		from
+ 			product P
+ 		where
+ 			product_no = #{ productNo }
+ 	</select>
+ 	
+ 	<select id="selectProductMainImages" resultType="productMainImages">
+ 		select
+ 			*
+ 		from
+ 			product_main_images
+ 		where
+ 			product_no = #{ productNo }
+ 	</select>
+ 	
+ 	
+ 	<select id="searchProductList" resultType="product">
+ 		select * from ( select ROWNUM RN, A.*
+        from (select * from product
+ 		<where>
+ 		
+ 		<if test="cateArr != null">
+ 			category in  <foreach collection="cateArr"
+			    		 item="cateArr"
+			    		 open="("
+			    		 close=")"
+			    		 separator=",">
+			    	#{ cateArr }
+			    	</foreach>
+ 		</if>
+ 		<if test="search != null and !search.isempty">
+	 		and (product_name like '%' || #{search} || '%'
+ 			or content like '%' || #{search} || '%')
+ 		</if>
+ 		
+ 		</where>) A)
+        WHERE RN BETWEEN #{page.start} and #{page.end}
+ 	</select>
+ 	
+ 	<select id="productCategory" resultType="product">
+ 		select * from product
+ 			where category = #{category}
+ 	</select>
+ 	
+ 	<select id="selectAddressList" resultType="address">
+ 		select
+ 			*
+ 		from
+ 			address
+ 		where
+ 			member_id = #{memberId}
+ 		order by 
+ 			reg_date desc
+ 	</select>
+ 	
+ 	
+ 	<insert id="insertCart">
+ 		insert into
+ 			cart
+ 		values
+ 		(
+ 		#{memberId},
+ 		#{productNo},
+ 		#{amount}
+ 		)
+ 	</insert>
+ 	
+ 	<insert id="insertReview">
+ 		insert into
+ 			review
+ 		values(
+ 			seq_review_no.nextval,
+ 			#{ purchaseLogNo },
+ 			#{ comments },
+ 			#{ score },
+ 			default
+ 		)
+ 	</insert>
+
+ 	<delete id="deleteFromCart">
+ 		delete from
+ 			cart
+ 		where
+ 			member_id = #{memberId} and
+ 			product_no = #{productNo}
+ 	</delete>
+ 	
+	<update id="updatePurchaseReturn" parameterType="_int">
+ 		update
+ 			purchase_log
+ 		set
+ 			status = -1
+ 		where
+ 			purchase_log_no = #{purchaseLogNo}
+ 	</update>
+
+ 	<update id="updatePurchaseConfirm" parameterType="_int">
+ 		update
+ 			purchase_log
+ 		set
+ 			status = 1
+ 		where
+ 			purchase_log_no = #{purchaseLogNo}
+ 	</update>
+ 	
+ 	<insert id="insertReturn">
+ 		insert into
+ 			return
+ 		values(
+ 			seq_return_no.nextval,
+ 			#{ status },
+ 			#{ purchaseLogNo },
+ 			#{ content },
+ 			#{ amount },
+ 			default
+ 		)
+ 	</insert>
+ 	
+ 	<select id="selectReturnNo" resultType="_int">
+ 		select
+ 			seq_return_no.currval
+ 		from
+ 			dual
+ 	</select>
+ 	
+ 	<insert id="insertReturnImages">
+ 		insert into
+ 			return_images
+ 		values(
+ 			seq_return_image_no.nextval,
+ 			#{ originalFilename },
+ 			#{ renamedFilename },
+ 			#{ returnNo }
+ 		)
+ 	</insert>
+ 	
+ 	<insert id="insertPurchase">
+ 		insert into
+ 			purchase
+ 		values(
+ 			seq_purchase_no.nextval,
+ 			#{memberId},
+ 			default,
+ 			#{addressName}
+ 		)
+ 	</insert>
+ 	
+ 	<select id="getPurchaseNo" resultType="_int">
+ 		select
+ 			seq_purchase_no.currval
+ 		from
+ 			dual
+ 	</select>
+ 	
+ 	<insert id="insertPurchaseLog">
+ 		insert into
+ 			purchase_log
+ 		values(
+ 			seq_purchase_log_no.nextval,
+ 			#{purchaseNo},
+ 			#{productNo},
+ 			#{amount},
+ 			default,
+ 			default
+ 		)
+ 	</insert>
+ 	
+ 	<select id="selectAllReturns" resultMap="returnMap">
+ 		select
+ 			R.return_no return_no,
+ 			R.status status,
+ 			R.purchase_log_no purchase_log_no,
+ 			R.amount amount,
+ 			R.confirm confirm,
+ 			PL.product_no product_no,
+ 			(select product_name from product where product_no = PL.product_no) product_name,
+ 			(select member_id from purchase where purchase_no = PL.purchase_no) member_id
+ 		from
+ 			return R
+ 			join purchase_log PL
+ 				on (R.purchase_log_no = PL.purchase_log_no)
+ 		where
+ 			confirm = 0
+ 		order by
+ 			return_no
+ 	</select>
+ 	
+ 	<select id="getReturnContent" resultType="string">
+ 		select
+ 			content
+ 		from
+ 			return
+ 		where
+ 			return_no = #{returnNo}
+ 	</select>
+ 	
+ 	<select id="getReturnImage" resultMap="returnImageMap">
+ 		select
+ 			*
+ 		from
+ 			return_images
+ 		where
+ 			return_no = #{returnNo}
+ 	</select>
+ 	
+ 	<update id="updateReturn">
+ 		update
+ 			return
+ 		set
+ 			confirm = #{confirm}
+ 		where
+ 			return_no = #{returnNo}
+ 	</update>
+ 	
+ 	<resultMap type="map" id="returnImageMap">
+ 		<id column="return_image_no" property="returnImageNo"/>
+ 		<result column="original_filename" property="originalFilename"/>
+ 		<result column="renamed_filename" property="renamedFilename"/>
+ 		<result column="return_no" property="returnNo"/>
+ 	</resultMap>
+ 	
+ 	 <resultMap type="map" id="returnMap">
+ 		<id column="return_no" property="returnNo"/>
+ 		<result column="status" property="status"/>
+ 		<result column="purchase_log_no" property="purchaseLogNo"/>
+ 		<result column="amount" property="amount"/>
+ 		<result column="confirm" property="confirm"/>
+ 		<result column="product_no" property="productNo"/>
+ 		<result column="product_name" property="productName"/>
+ 		<result column="member_id" property="memberId"/>
+ 	</resultMap>
+ 	
+ 	<resultMap type="cart" id="cartMap">
+ 		<id column="member_id" property="memberId"/>
+ 		<result column="product_no" property="productNo"/>
+ 		<result column="amount" property="amount"/>
+		
+		<collection property="selectedProduct" ofType="product">
+			<id column="product_no" property="productNo"/>
+	 		<result column="product_name" property="productName"/>
+	 		<result column="reg_date" property="regDate"/>
+	 		<result column="category" property="category"/>
+	 		<result column="content" property="content"/>
+	 		<result column="price" property="price"/>
+	 		<result column="emp_id" property="empId"/>
+	 		<result column="enabled" property="enabled"/>
+		</collection> 	
+ 	</resultMap>
+</mapper>

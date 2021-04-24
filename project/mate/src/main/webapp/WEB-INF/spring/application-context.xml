@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans https://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.3.xsd
+		http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.3.xsd">
+	
+	
+	<context:property-placeholder location="/config/*.properties" /> 
+	<!-- Root Context: defines shared resources visible to all other web components -->
+	<bean class="org.apache.commons.dbcp.BasicDataSource"
+		  id="realDataSource"
+		  destroy-method="close">
+		<property name="driverClassName" value="${spring.datasource.driverClassName}"/>
+		<property name="url" value="${spring.datasource.url}"/>
+		<property name="username" value="${spring.datasource.username}"/>
+		<property name="password" value="${spring.datasource.password}"/>
+	</bean>
+	
+	<bean id="dataSource"
+		  class="net.sf.log4jdbc.Log4jdbcProxyDataSource">
+		<constructor-arg ref="realDataSource"/>
+		<property name="logFormatter">
+			<bean class="net.sf.log4jdbc.tools.Log4JdbcCustomFormatter">
+				<property name="loggingType" value="MULTI_LINE"/>
+				<property name="sqlPrefix" value="[SQL] "/>
+			</bean>
+		</property>
+	</bean>
+	
+	<bean class="org.mybatis.spring.SqlSessionFactoryBean"
+		  id="sqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="configLocation" value="classpath:mybatis-config.xml"/>
+		<property name="mapperLocations" value="classpath*:mapper/**/*.xml"/>
+	</bean>
+	
+	<bean id="sqlSessionTemplate"
+		  class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="sqlSessionFactoryBean"/>
+	</bean>
+	
+	<bean class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		  id="transactionManager">
+		<property name="dataSource" ref="dataSource"/>	  
+	</bean>
+	<tx:annotation-driven transaction-manager="transactionManager"/>
+		
+		<!--호근 구글 관련 빈 추가  -->
+		
+		<!--호근 구글 관련 빈 추가  -->
+		<bean id="googleConnectionFactory"
+		  class="org.springframework.social.google.connect.GoogleConnectionFactory">
+		  <constructor-arg
+		    value="93017944849-jhc664qbvopmvdef3slp07qeq1fmu1ig.apps.googleusercontent.com" />
+		  <constructor-arg value="pkf-KlurOq00uHKs5FcWXQVz" />
+		</bean>
+		<!-- 승인된 자바스크립트 원본과 승인된 리디렉션 URI -->
+		<bean id="googleOAuth2Parameters"
+		  class="org.springframework.social.oauth2.OAuth2Parameters">
+		  <property name="scope"
+		    value="https://www.googleapis.com/auth/plus.me" />
+		  <property name="redirectUri"
+		    value="http://localhost:9090/mate/googlecallback.do" />
+		</bean>
+		
+</beans>

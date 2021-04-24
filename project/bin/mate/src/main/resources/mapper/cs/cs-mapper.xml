@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cs">
+  
+ <select id="selectCsList" resultType="cs">
+SELECT * 
+		FROM (
+			SELECT ROWNUM as rnum, B.*
+				FROM (
+                    select c.*,
+                        (select count(*) from cs_reply cr where c.cs_no =  cr.cs_no ) is_reply
+                        from(   
+                            SELECT
+                                     ba.*,
+                                     ci.cs_image_no,
+                                     ci.original_filename,
+                                     ci.renamed_filename
+                                 	FROM cs ba  
+                                 	left join cs_images ci on ba.cs_no = ci.cs_no )c 			
+	                             	 <where>
+										<if test="memberId != null and memberId != ''">
+											and  member_id like  #{ memberId }
+										</if>
+										<if test="secret != null and secret != ''">
+											and  secret  =  #{ secret }
+										</if>
+									</where>
+	                                 order by
+							notice desc, cs_no desc
+							) B
+					)
+			 where rnum BETWEEN #{ cPage } AND #{ numPerPage }
+	</select>
+	<resultMap type="cs" id="csMap">
+	
+	</resultMap>
+	
+	<insert id="insertCs">
+		insert into
+			CS
+		values (
+			seq_cs_no.nextval,
+			#{ title },
+			#{ content },
+			#{ memberId },
+			default,
+			#{ secret },
+			#{ notice }		
+		)
+		
+		<selectKey order="AFTER" resultType="_int" keyProperty="csNo">
+			select
+				seq_cs_no.currval
+			from
+				dual
+		</selectKey>
+	</insert>
+	
+	<insert id="insertCsImage">
+		insert into
+			cs_images
+		values(
+			seq_cs_image_no.nextval,
+			#{ originalFilename },
+			#{ renamedFilename },
+			#{ csNo }
+		)
+	</insert>
+	
+	<delete id="deleteCs">
+        delete from 
+        	CS 
+     	where 
+     		cs_no = #{ csNo } 
+    </delete>
+
+	<select id="selectOneCsCollection" resultType="cs">
+		select
+			*
+		from
+			cs
+		where
+			cs_no = #{ csNo }
+		order by
+		notice desc, cs_no desc
+	</select>
+	
+	<select id="selectCsImage" resultType="CsImages">
+		select
+			*
+		from
+			cs_images
+		where
+			cs_no = #{ csNo }
+	</select>
+	
+	<select id="selectOneCsImage" resultType="CsImages">
+		select
+			*
+		from
+			cs_images
+		where
+			cs_no = #{ csNo }
+	</select>
+	
+	<select id="getSearchContents" resultType="_Int">
+		select
+			count(*)
+		from cs
+	
+	</select>
+	
+</mapper>

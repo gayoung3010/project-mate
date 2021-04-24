@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="erpBoard">
+
+	<select id="selectOneEmpBoard" resultMap="empBoardCollection">
+		select
+		    B.*,
+		    bi.board_image_no,
+		    bi.original_filename,
+		    bi.renamed_filename,
+            i.board_info_no,
+            i.product_no,
+            i.amount,
+            (select  product_name from product where  product_no = i.product_no ) as product_name,
+            (select emp_name from emp where emp_id= b.emp_id) as emp_name
+		from board B
+			left join board_images bi 
+				on  b.board_no =  bi.board_no
+	        left join board_info i
+	       		 on b.board_no = i.board_no
+		where b.board_no = #{ no }
+	</select>
+	
+	<resultMap type="empBoard" id="empBoardCollection">
+		<id column="board_no" property="boardNo"/>
+		<result column="title" property="title"/>
+		<result column="category" property="category"/>
+		<result column="content" property="content"/>
+		<result column="emp_id" property="empId"/>
+		<result column="reg_date" property="regDate"/>
+		<result column="enabled" property="enabled"/>
+		<result column="read_count" property="readCount"/>
+		<result column="board_info_no" property="boardInfoNo"/>
+		<result column="product_no" property="productNo"/>
+		<result column="amount" property="amount"/>
+		<result column="product_name" property="productName"/>
+		<result column="emp_name" property="empName"/>
+		<result column="stock" property="stock"/>
+		<collection property="empBoardImageList" ofType="EmpBoardImage">
+			<id column="board_image_no" property="boardImageNo"/>
+			<result column="original_filename" property="originalFilename"/>
+			<result column="renamed_filename" property="renamedFilename"/>
+			<result column="download_count" property="downloadCount"/>
+		</collection>
+	</resultMap>
+	<select id="selectReplyList" resultType="EmpBoardReply">
+		select 
+		    * 
+		from  (select r.* ,e.emp_name empName from emp e join board_reply r on e.emp_id = r.emp_id) 
+		where  board_no = #{ boardNo }
+		order by reg_date desc
+			
+	</select>
+	
+	<insert id="insertBoardReply">
+		insert into
+			 board_reply 
+			 values(
+			  seq_board_reply_no.nextval,
+			   #{ content }, 
+			   sysdate, 
+			   #{ boardNo },
+			   #{ empId }
+			   )
+	</insert>
+	
+	<delete id="deleteReply">
+		delete from board_reply
+		where board_reply_no = #{ boardReplyNo } 
+	
+	</delete>
+	
+	<update id="updateReply">
+		update board_reply 
+			set
+		 content = #{ content }
+		 where board_reply_no = #{ boardReplyNo } 
+	</update>
+	
+	<insert id="insertEmpBoard">
+		insert into 
+			board 
+		values(seq_board_no.nextval 
+		,#{ category }
+		,#{ title }
+		,#{ content } 
+		,#{ empId}
+		,default
+		, 0
+		, 0)
+		<selectKey order="AFTER" resultType="_int" keyProperty="boardNo">
+			select
+				seq_board_no.currval 			
+ 			from
+ 				dual
+ 		</selectKey>
+	</insert>
+	
+	<insert id="insertEmpBoardImage">
+		insert into
+    		board_images
+        values(
+        seq_board_image_no.nextval,
+        #{ originalFilename },
+        #{ renamedFilename },
+		#{ boardNo }
+		)
+	</insert>
+	
+	<select id="empBoardFileDownload" resultType="empBoardImage">
+		select
+			*
+		from board_images
+		where board_image_no = #{ no }
+	
+	</select>
+	
+	<select  id="erpProductList" resultMap="empProductCollection">
+		select p.product_no,
+			p.product_name,
+			p.category,
+			s.emp_id,
+			p.reg_date,
+			s.stock,
+            (select emp_name from emp where emp_id= p.manufacturer_id) as emp_name
+		from product p left join stock s
+				on (p.product_no = s.product_no)
+	</select>
+	
+	<resultMap type="product" id="empProductCollection">
+		<id column="product_no" property="productNo"/>
+		<result column="product_name" property="productName"/>
+		<result column="category" property="category"/>
+		<result column="emp_id" property="empId"/>
+		<result column="reg_date" property="regDate"/>
+		<result column="stock" property="stock"/>
+		<result column="emp_name" property="empName"/>
+	</resultMap>
+	
+	<insert id="insertRequestStock">
+		insert into
+			board_info
+			values(
+			    seq_board_info_no.nextval,
+			    #{ boardNo },
+			    #{ productNo },
+			    #{ amount }
+			)
+	</insert>
+	
+	<update id="increaseReadCount">
+		update board 
+			set read_count = read_count + 1
+			where board_no = #{ no } 
+		
+	</update>
+	
+	<select id="getTotalContent" resultType="int">
+	   <![CDATA[
+		select count(*) total_contents from board
+		  ]]>
+	</select>
+	
+	<select id="searchBoard" resultType="EmpBoard">
+		SELECT * 
+		FROM (
+			SELECT ROWNUM as rnum, B.*
+				FROM (
+			    	select *
+                       from(   
+                            SELECT ba.*,
+                                (select emp_name from emp where emp_id= ba.emp_id) as emp_name
+                                 FROM board ba
+                             ) 					
+						<where>
+							<if test="status != null and status == 2">
+								and category = 'adv'	
+							</if>
+							<if test="searchType != null and searchType != '' and searchKeyword != null and searchKeyword != ''">
+								and ${ searchType }  like '%' || #{ searchKeyword } || '%'
+							</if>
+						</where>
+						ORDER BY                
+
+                                    CASE WHEN enabled = 0  THEN enabled END asc
+                                    <if test="status == null">
+                                    ,
+                                    CASE WHEN category LIKE 'ntc' THEN category END asc,
+                                    CASE WHEN category LIKE 'req' THEN category END asc
+                                    </if>
+                                    ,
+
+                            		 reg_date DESC 
+						) B
+				)
+			 where rnum BETWEEN #{ cPage } AND #{ numPerPage }
+	</select>
+	
+	<select id="searchContents" resultType="_Int">
+		<![CDATA[
+			select  count(*) from
+		  	  ( select
+		            b.*,
+		       		 (select e.emp_name from emp e  where b.emp_id = e.emp_id ) emp_name
+		         from 
+		        board b)
+		 ]]>
+		  <where>
+		  	<if test="status != null and status == 2">
+								and category = 'adv'	
+			</if>
+			<if test="searchType != null and searchType != '' and searchKeyword != null and searchKeyword != ''">
+				and  ${ searchType } like '%' || #{ searchKeyword } || '%'
+			</if>
+		</where>
+		order by reg_date
+	</select>
+	
+	<select id="selectEmpStock"  resultMap="empBoardCollection">
+		select
+		    *
+		from
+			(select p.product_no,
+					p.product_name,
+					p.category,
+					s.emp_id,
+					p.reg_date,
+					s.stock,
+		            (select emp_name from emp where emp_id= s.emp_id) as emp_name
+				from product p left join stock s
+						on (p.product_no = s.product_no)
+                )
+		where emp_id = #{ empId }
+		and product_no = #{ productNo }
+	</select>
+	
+	<delete id="empBoardDelete">
+		delete from board
+		where board_no = #{ boardNo }
+	</delete>
+	
+	<select id="selectOneBoardImage" resultType="EmpBoardImage">
+ 		select
+ 			*
+ 		from
+ 			board_images
+ 		where
+ 			board_no = #{ boardNo }
+ 	</select>
+ 	
+ 	<update id="empBoardUpdate">
+ 		update
+ 			board
+	 	<trim prefix="SET" prefixOverrides=",">
+			<if test='category != null and category != ""'>
+				, category = #{ category }
+			</if>
+			<if test='title != null and title != ""'>
+				,title	= #{ title }
+	   	  	</if>
+			<if test='content != null and content != ""'>
+				,content	= #{ content }
+	   	  	</if>
+		</trim>
+	 			where board_no = #{boardNo}
+ 	</update>
+	
+	<delete id="empBoardFileDelete">
+		delete from board_images where board_no = #{ boardNo }
+	</delete>
+	
+	<update id="empBoardFileUpdate">
+		update board_images 
+			set original_filename = #{ originalFilename },
+				 renamed_filename = #{ renamedFilename }
+		where board_no = #{ boardNo }
+
+	</update> 	
+	
+	<update id="enabledUpdate">
+		update board set enabled = 1 where board_no = #{ no }
+	
+	</update>
+	
+	<update id="updateTranStock">
+		update stock set stock = stock - #{ amount } 
+		where product_no = #{ productNo }
+		and emp_id = #{ transEmpId }
+	</update>
+	
+	<update id="updateStock">
+		update stock set stock = stock  +  #{ transStock }
+			where product_no = #{ productNo }
+			and emp_id = #{ empId }
+	</update>
+	
+	<update id="updateStockInfo">
+		update board_info set amount = amount - #{ transStock } 
+		where board_no = #{ no }
+		and product_no =  #{ productNo }
+	</update>
+	
+	<select id="ioEmpList" resultType="map">
+		select
+				    *
+				from ( 
+				        select 
+				            b.*
+				           from( 
+				                select 
+				                         e.emp_name as "empName",
+				                       	 e.status as "empStatus",
+				                       	 e.emp_id as "empId",
+				                         io.io_no as "ioNo",
+				                         io.product_no as "productNo",
+				                         io.amount as "amount",
+				                         p.product_name as "productName",
+				                         io.status as "status", 
+				                         io.io_date as "ioDate",
+				                         <if test="monthday != null and monthday != ''">
+		                                 io.io_date as "checkDate",
+		                                 </if>
+				                         (select emp_name from emp where emp_id = p.manufacturer_id ) as "manufacturerName" 
+				                     from  
+				                       emp  e 
+				                     join io_log io on e.emp_id = io.emp_id          
+				                     join product p on p.product_no = io.product_no
+				                     <where>
+								  	  <if test="monthday != null and monthday != ''">   
+								  		and to_char(io.io_date, 'yyyyMMdd') = #{ monthday }
+								  	 </if>
+				                     </where>
+		                             order by io_date desc
+				                 )b
+				        ) d
+				        
+				  
+				
+	</select>
+
+</mapper>

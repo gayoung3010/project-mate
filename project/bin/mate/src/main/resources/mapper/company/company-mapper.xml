@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="company">
+  <select id="selectAllCompanyMapList" resultMap="companyMap">
+    select
+    	*
+    from
+    	emp
+    where
+    	status = 1
+  </select>
+  
+  <resultMap id="companyMap" type="map">
+  	<id column="emp_id" property="empId"/>
+  	<result column="emp_pwd" property="empPwd"/>
+  	<result column="emp_name" property="empName"/>
+  	<result column="addr1" property="addr1"/>
+  	<result column="addr2" property="addr2"/>
+  	<result column="addr3" property="addr3"/>
+  	<result column="phone" property="phone"/>
+  	<result column="enroll_date" property="enrollDate"/>
+  	<result column="status" property="status"/>
+  </resultMap>
+</mapper>

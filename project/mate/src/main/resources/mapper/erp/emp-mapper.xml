@@ -1,0 +1,388 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="emp">
+
+	<select id="erpSearchList" resultMap="empMap">
+		select * from ( select ROWNUM RN, A.*
+        from (select * from emp 
+		<where>
+	 		<if test="options.status != null and options.status != ''">
+	 			status in  
+	 				<foreach collection="options.status"
+				    		 item="arr"
+				    		 open="("
+				    		 close=")"
+				    		 separator=",">
+				    	#{ arr }
+				    </foreach>
+	 		</if>
+	 		<if test="options.searchType != null and options.searchType != '' and options.searchKeyword != null and options.searchkeyword != ''">
+		 		and ${ options.searchType } like '%' || #{options.searchKeyword} || '%'
+	 		</if>
+ 		</where>) A)
+ 		 WHERE RN BETWEEN #{start} and #{end}
+	</select>
+	
+	<select id="countEMP" resultType='_int'>
+		select
+			count(*)
+		from 
+			emp
+		<where>
+	 		<if test="options.status != null and options.status != ''">
+	 			status in  
+	 				<foreach collection="options.status"
+				    		 item="arr"
+				    		 open="("
+				    		 close=")"
+				    		 separator=",">
+				    	#{ arr }
+				    </foreach>
+	 		</if>
+	 		<if test="options.searchType != null and options.searchType != '' and options.searchKeyword != null and options.searchkeyword != ''">
+		 		and ${ options.searchType } like '%' || #{options.searchKeyword} || '%'
+	 		</if>
+ 		</where>
+	</select>
+
+	<select id="getProductList" resultMap="productMap">
+		select
+			*
+		from(
+				select
+					P.*,
+					rownum rnum
+				from (	select 
+						    P.product_no product_no,
+						    P.product_name product_name,
+						    P.reg_date reg_date,
+						    P.category category,
+						    (select emp_name from emp where emp_id = P.manufacturer_id) manufacturer_name,
+						    P.manufacturer_id manufacturer_id,
+						    nvl((select stock from stock S where emp_id = #{options.loginEmp} and S.product_no = P.product_no), -1) stock,
+						    nvl((select confirm from request_log where product_no = P.product_no and emp_id = #{options.loginEmp} and confirm = 0), -2) request,
+						    P.enabled enabled
+						from 
+						    product P
+						order by 
+							P.product_no desc
+				) P
+				<where>
+					<if test="options.category != null">
+			 			and category in  
+		 				<foreach collection="options.category" item="arr" open="(" close=")" separator=",">
+					    	#{ arr }
+					    </foreach>
+			 		</if>
+			 		<if test="options.min != null">
+			 			<if test="options.min == 0">
+			 				and stock <![CDATA[>=]]> -1
+			 			</if>
+			 			<if test="options.min != 0">
+				 			and stock <![CDATA[>=]]> #{options.min}
+			 			</if>
+			 		</if>
+			 		<if test="options.max != null">
+			 			and stock <![CDATA[<=]]> #{options.max}
+			 		</if>
+			 		<if test="options.search != null">
+			 			and product_name like '%' || #{options.search} || '%'
+			 			<if test="options.productNo != null">
+			 				or  product_no = #{options.productNo}
+			 			</if>
+			 		</if>
+			 		<if test="options.enabled != null">
+			 			and enabled = #{options.enabled}
+			 		</if>
+				</where>
+		)
+		where
+			rnum <![CDATA[>=]]> #{start} and
+			rnum <![CDATA[<=]]> #{end}
+	</select>
+
+	<resultMap type="map" id="productMap">
+		<result column="product_no" property="productNo"/>
+		<result column="manufacturer_id" property="manufacturerId"/>
+		<result column="product_name" property="productName"/>
+		<result column="stock" property="stock"/>
+		<result column="request" property="request"/>
+		<result column="category" property="category"/>
+		<result column="reg_date" property="regDate"/>
+		<result column="manufacturer_name" property="manufacturerName"/>
+		<result column="enabled" property="enabled"/>
+	</resultMap>
+	
+	<select id="getProductTotalContents" resultType="_int">
+		select
+			count(*)
+		from (	select
+					P.*,
+					rownum rnum
+				from (	select 
+						    P.product_no product_no,
+						    P.product_name product_name,
+						    P.reg_date reg_date,
+						    P.category category,
+						    (select emp_name from emp where emp_id = P.manufacturer_id) manufacturer_name,
+							nvl((select stock from stock S where emp_id = #{options.loginEmp} and S.product_no = P.product_no), -1) stock,
+						    nvl((select confirm from request_log where product_no = P.product_no and emp_id = #{options.loginEmp} and confirm = 0), -2) request,
+						    P.enabled enabled
+						from 
+						    product P
+						order by 
+							P.product_no desc
+				) P
+				<where>
+					<if test="options.category != null">
+			 			and category in  
+		 				<foreach collection="options.category" item="arr" open="(" close=")" separator=",">
+					    	#{ arr }
+					    </foreach>
+			 		</if>
+			 		<if test="options.min != null">
+			 			<if test="options.min == 0">
+			 				and stock <![CDATA[>=]]> -1
+			 			</if>
+			 			<if test="options.min != 0">
+				 			and stock <![CDATA[>=]]> #{options.min}
+			 			</if>
+			 		</if>
+			 		<if test="options.max != null">
+			 			and stock <![CDATA[<=]]> #{options.max}
+			 		</if>
+			 		<if test="options.search != null">
+			 			and product_name like '%' || #{options.search} || '%'
+			 			<if test="options.productNo != null">
+			 				or  product_no = #{options.productNo}
+			 			</if>
+			 		</if>
+			 		<if test="options.enabled != null">
+			 			and enabled = #{options.enabled}
+			 		</if>
+				</where>
+		) 
+	</select>
+
+	<insert id="insertEmp">
+		insert into
+			EMP
+		values(
+			#{ empId },
+			#{ empPwd },
+			#{ empName },
+			#{ empAddr1 },
+			#{ empAddr2 },
+			#{ empAddr3 },
+			#{ empPhone },
+			default,		
+			#{ status },
+			default
+		)
+	</insert>
+	
+	<select id="selectOneEmp" resultType="emp">
+		select
+			emp_id AS empId,
+			emp_name AS empName,
+			emp_pwd AS empPWD,
+			addr1 AS empAddr1,
+			addr2 AS empAddr2,
+			addr3 AS empAddr3,
+			phone AS empPhone,
+			enroll_date AS empEnrollDate,
+			status AS status
+		from
+			emp
+		where
+			emp_id = #{ empId }
+	</select>
+	
+	<update id="infoUpdate">
+		update
+			emp
+		<set>
+			emp_id = #{ empId },
+			<if test="empPwd != null">
+			emp_pwd = #{ empPwd },
+			</if>
+			<if test="empName != null">
+			emp_name = #{ empName },
+			</if>
+			<if test="empAddr1 != null">
+			addr1 = #{ empAddr1 },
+			</if>
+			<if test="empAddr2 != null">
+			addr2 = #{ empAddr2 },
+			</if>
+			<if test="empAddr3 != null">
+			addr3 = #{ empAddr3 },
+			</if>
+			<if test="empPhone != null">
+			phone = #{ empPhone },
+			</if>
+			<if test="status != null">
+			status = #{ status }
+			</if>
+		</set>
+		where
+			emp_id = #{ empId }
+	</update>
+	
+	<update id="updateEmpDelete">
+		update
+			emp
+		set
+			enabled = 1
+		where
+			emp_id = #{empId}
+	</update>
+	
+	<update id="vitalEmp">
+		update
+			emp
+		set
+			enabled = 0
+		where
+			emp_id = #{empId}
+	</update>
+	
+	<delete id="infoDelete">
+		delete
+		from
+			emp
+		where
+			emp_id = #{ empId }
+	</delete>
+	
+	<resultMap type="emp" id="empMap">
+		<result column="addr1" property="empAddr1"/>
+		<result column="addr2" property="empAddr2"/>
+		<result column="addr3" property="empAddr3"/>
+		<result column="enroll_date" property="empEnrollDate"/>
+		<result column="phone" property="empPhone"/>
+	</resultMap>
+
+	<select id="empList" resultType="EMP">
+		select
+			emp_id AS empId,
+			emp_name AS empName,
+			addr2 AS empAddr2,
+			phone AS empPhone,
+			enroll_date AS empEnrollDate,
+			status AS status,
+			enabled AS enabled
+		from
+			EMP
+		order by
+			enroll_date
+	</select>
+	
+	<select id="ioLogList" resultType="ioLog">
+		select
+			*
+		from
+			Io_Log	
+	</select>
+	<select id="ioLogMapList" resultMap="salesMap">
+		select
+			*
+		from(
+			select
+			    <if test="month == null">to_char(io_date, 'yyyyMM') io_date,</if>
+			    <if test="month != null">to_char(io_date, 'yyyyMMdd') io_date,</if>
+			    emp_id,
+			    decode((select emp_name from emp where emp_id = I.emp_id), '본사관리자','온라인', (select emp_name from emp where emp_id = I.emp_id)) emp_name,
+			    status,
+			    product_no,
+			    (select product_name from product where product_no = I.product_no) product_name,
+			    (select price from product where product_no = I.product_no) price,
+			    amount
+			from
+			    io_log I
+			order by
+			    io_date asc
+			)
+		<where>
+			<if test="month == null">
+		    	io_date like #{ year } || '%'		
+			</if>
+			<if test="month != null">
+		    	io_date like #{year} || #{ month } || '%'		
+			</if>
+		</where>
+	</select>
+	<resultMap id="salesMap" type="map">
+		<result column="io_date" property="ioDate"/>
+		<result column="emp_id" property="empId"/>
+		<result column="emp_name" property="empName"/>
+		<result column="status" property="status"/>
+		<result column="product_no" property="productNo"/>
+		<result column="product_name" property="productName"/>
+		<result column="price" property="price"/>
+		<result column="amount" property="amount"/>
+	</resultMap>
+	
+	<select id="empNameList" resultMap="empNameMap">
+		select
+			decode(emp_name,'본사관리자','온라인', emp_name) emp_name
+		from
+			emp
+		where
+			status != 2
+			<if test="empId != 'admin'">
+				and emp_id = #{empId}
+			</if>
+	</select>
+	<resultMap id="empNameMap" type="map">
+		<result column="emp_name" property="empName"/>
+	</resultMap>
+	
+	<select id="yearList" resultType="string">
+		select 
+			*
+		from(
+			select 
+				to_char(io_date, 'yyyy') io_date
+			from 
+				io_log
+			)	
+		group by io_date
+		order by io_date
+	</select>
+	
+	<select id="productList" resultType="Product">
+		select
+			*
+		from
+			Product
+			
+	</select>
+	
+	<select id="receiveList" resultType="Receive">
+		select
+			*
+		from
+			Receive
+			
+	</select>
+	
+	<select id="requestList" resultType="RequestLog">
+		select
+			*
+		from
+			Request_Log
+	</select>
+	
+	<select id="erpParamList" resultType="EMP">
+		select * from emp
+		<where>
+			<if test="empId != null and empId == 'admin'">
+			and status != 2
+			</if>
+		</where>
+	
+	</select>
+</mapper>
