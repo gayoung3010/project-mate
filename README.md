@@ -11,10 +11,10 @@ MATE (Market Adult Toy ERP)
 
 ## 개발 환경
 
-> **OS :** Windows 10
-> **WAS :** Apache Tomcat 8.5
-> **Dababase :** Oracle 11g
-> **Language :** Java, HTML5, CSS3, JavaScript, SQL
+> **OS :** Windows 10<br/>
+> **WAS :** Apache Tomcat 8.5<br/>
+> **Dababase :** Oracle 11g<br/>
+> **Language :** Java, HTML5, CSS3, JavaScript, SQL<br/>
 > **IDE :** Spring Tool Suite 4, SQL Developer
 
 ## 핵심 기능
